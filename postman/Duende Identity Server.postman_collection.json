@@ -1,0 +1,211 @@
+{
+  "info": {
+    "_postman_id": "2e98f423-c2b9-45c8-8847-204f33d71d27",
+    "name": "Duende Identity Server",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "23032977",
+    "_collection_link": "https://go.postman.co/collection/23032977-2e98f423-c2b9-45c8-8847-204f33d71d27?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Interactive",
+      "request": {
+        "method": "GET",
+        "header": []
+      },
+      "response": []
+    },
+    {
+      "name": "m2m client",
+      "request": {
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "username",
+              "value": "m2m.client",
+              "type": "string"
+            },
+            {
+              "key": "password",
+              "value": "511536EF-F270-4058-80CA-1C89C192F69A",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "type": "text",
+              "key": "grant_type",
+              "value": "client_credentials"
+            },
+            {
+              "type": "text",
+              "key": "scope",
+              "value": "scope1"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/connect/token",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "connect",
+            "token"
+          ]
+        },
+        "description": "Generated from cURL: curl -X POST https://localhost:5001/connect/token \\\n  -H \"Content-Type: application/x-www-form-urlencoded\" \\\n  -d \"grant_type=client_credentials&scope=scope1\" \\\n  -u \"m2m.client:511536EF-F270-4058-80CA-1C89C192F69A\"\n"
+      },
+      "response": []
+    },
+    {
+      "name": "code flow",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/connect/authorize?response_type=code&client_id=interactive&scope=openid%20profile%20scope2&redirect_uri=https%3A%2F%2Foauth.pstmn.io%2Fv1%2Fcallback",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "connect",
+            "authorize"
+          ],
+          "query": [
+            {
+              "key": "response_type",
+              "value": "code"
+            },
+            {
+              "key": "client_id",
+              "value": "interactive"
+            },
+            {
+              "key": "scope",
+              "value": "openid%20profile%20scope2"
+            },
+            {
+              "key": "redirect_uri",
+              "value": "https%3A%2F%2Foauth.pstmn.io%2Fv1%2Fcallback"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "discovery",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/.well-known/openid-configuration",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            ".well-known",
+            "openid-configuration"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "auth": {
+    "type": "oauth2",
+    "oauth2": [
+      {
+        "key": "useBrowser",
+        "value": false,
+        "type": "boolean"
+      },
+      {
+        "key": "grant_type",
+        "value": "authorization_code_with_pkce",
+        "type": "string"
+      },
+      {
+        "key": "authUrl",
+        "value": "{{baseUrl}}/connect/authorize",
+        "type": "string"
+      },
+      {
+        "key": "accessTokenUrl",
+        "value": "{{baseUrl}}/connect/token",
+        "type": "string"
+      },
+      {
+        "key": "client_authentication",
+        "value": "body",
+        "type": "string"
+      },
+      {
+        "key": "clientSecret",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "redirect_uri",
+        "value": "https://oauth.pstmn.io/v1/callback",
+        "type": "string"
+      },
+      {
+        "key": "scope",
+        "value": "openid profile scope2",
+        "type": "string"
+      },
+      {
+        "key": "clientId",
+        "value": "{{clientId}}",
+        "type": "string"
+      },
+      {
+        "key": "tokenName",
+        "value": "IDM",
+        "type": "string"
+      },
+      {
+        "key": "addTokenTo",
+        "value": "header",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ]
+}
