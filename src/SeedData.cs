@@ -39,6 +39,7 @@ public class SeedData
                             new Claim(JwtClaimTypes.FamilyName, "Smith"),
                             new Claim(JwtClaimTypes.WebSite, "http://alice.example.com"),
                         }).Result;
+                
                 if (!result.Succeeded)
                 {
                     throw new Exception(result.Errors.First().Description);
