@@ -1,3 +1,14 @@
+# Project Summary
+
+This project was generated from Duende.Templates using the "identity-is-aspid" which uses ASP.NET Identity as it's User and Sessions store. The template has been iterated on to achieve PKCE interactive flow with postman testing. 
+
+The aim is to learn how Duende can be configured for various clients including public facing clients and in-house machine-to-machine clients.
+
+### Nice-to-haves
+- It would be useful to add a flutter project, very simple log in/out options, implemented with the use of an OpenId Connect module with the configurations setup as seen in the Postman collection
+
+- It would be great to also have a function app or web app that spoke to another web app or function app. The calling site would get an issued JWT (authentication) and then the receiving site will verify the token and allow the operation if the user is authorised to do so.
+
 # 1. Seed the database
 
 change directory to the same level as program.cs
