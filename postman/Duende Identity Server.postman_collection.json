@@ -8,14 +8,6 @@
   },
   "item": [
     {
-      "name": "Interactive",
-      "request": {
-        "method": "GET",
-        "header": []
-      },
-      "response": []
-    },
-    {
       "name": "m2m client",
       "request": {
         "auth": {
