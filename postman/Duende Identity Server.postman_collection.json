@@ -2,11 +2,559 @@
   "info": {
     "_postman_id": "2e98f423-c2b9-45c8-8847-204f33d71d27",
     "name": "Duende Identity Server",
+    "description": "This collection provides a set of requests for interacting with a **Duende Identity Server** — an OpenID Connect and OAuth 2.0 identity provider. It is intended for exploring and testing the core authentication and token flows exposed by the server.\n\n## Authentication\n\nThe collection is pre-configured with **OAuth 2.0 (Authorization Code + PKCE)** at the collection level, using the following scopes: `openid profile scope2`. Token requests are sent to `{{baseUrl}}/connect/token` and the authorization endpoint is `{{baseUrl}}/connect/authorize`. The `{{clientId}}` variable is used to identify the client application.\n\n## Requests\n\n| Request | Method | Description |\n|---|---|---|\n| **discovery** | GET | Fetches the OpenID Connect Discovery Document (`/.well-known/openid-configuration`), which lists all server endpoints, supported grant types, scopes, and the JWKS URI for token verification. |\n| **code flow** | GET | Initiates the Authorization Code flow by hitting the `/connect/authorize` endpoint with the required query parameters (`response_type`, `client_id`, `scope`, `redirect_uri`). |\n| **m2m client** | POST | Requests a token using the Machine-to-Machine (Client Credentials) grant via `/connect/token`, suitable for server-to-server communication without user interaction. |\n\n## Variables\n\nThe collection relies on the following environment variables:\n\n- `{{baseUrl}}` — The base URL of the Identity Server instance\n- `{{clientId}}` — The OAuth 2.0 client identifier\n- `{{clientSecret}}` — The client secret (used where applicable)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "23032977",
     "_collection_link": "https://go.postman.co/collection/23032977-2e98f423-c2b9-45c8-8847-204f33d71d27?source=collection_link"
   },
   "item": [
+    {
+      "name": "code flow",
+      "item": [
+        {
+          "name": "1. connect/authorize",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Generate a random code verifier\r",
+                  "const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';\r",
+                  "\r",
+                  "let verifier = '';\r",
+                  "\r",
+                  "for (let i = 0; i < 64; i++) {\r",
+                  "    verifier += chars.charAt(Math.floor(Math.random() * chars.length));\r",
+                  "}\r",
+                  "\r",
+                  "pm.environment.set(\"code_verifier\", verifier);\r",
+                  "\r",
+                  "// SHA256 hash\r",
+                  "const hash = CryptoJS.SHA256(verifier);\r",
+                  "\r",
+                  "// Convert to Base64\r",
+                  "const base64 = CryptoJS.enc.Base64.stringify(hash);\r",
+                  "\r",
+                  "// Convert to Base64URL\r",
+                  "const challenge = base64\r",
+                  "    .replace(/\\+/g, '-')\r",
+                  "    .replace(/\\//g, '_')\r",
+                  "    .replace(/=+$/, '');\r",
+                  "\r",
+                  "pm.environment.set(\"code_challenge\", challenge);\r",
+                  "\r",
+                  "console.log(\"Verifier:\", verifier);\r",
+                  "console.log(\"Challenge:\", challenge);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/connect/authorize/callback?response_type=code&client_id=interactive&scope=openid%20profile%20scope2&redirect_uri=https%3A%2F%2Foauth.pstmn.io%2Fv1%2Fcallback&code_challenge={{code_challenge}}&code_challenge_method=S256",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "connect",
+                "authorize",
+                "callback"
+              ],
+              "query": [
+                {
+                  "key": "response_type",
+                  "value": "code"
+                },
+                {
+                  "key": "client_id",
+                  "value": "interactive"
+                },
+                {
+                  "key": "scope",
+                  "value": "openid%20profile%20scope2"
+                },
+                {
+                  "key": "redirect_uri",
+                  "value": "https%3A%2F%2Foauth.pstmn.io%2Fv1%2Fcallback"
+                },
+                {
+                  "key": "code_challenge",
+                  "value": "{{code_challenge}}"
+                },
+                {
+                  "key": "code_challenge_method",
+                  "value": "S256"
+                }
+              ]
+            },
+            "description": "Go to the code snippet panel (on the right hand side), view it as 'Postman CLI'. Since this request has a script it will generate a new code_challenge each time the code snippet is generated - HANDY!\n\nWe can copy and paste this GET request in to Google Chrome (or whatever), this will redirect to the login page, where the user must enter their credentials. Given the credentials are correct, this will then provide a callback to the call-site with a code - see `code` query\n\nIt will look something like this  \n[https://oauth.pstmn.io/v1/callback?code=0512947A962725A0AE0CAB2D59AD240EBA20E79EBC97B3FBBB360889D2769547-1&amp;session_state=ZT1DnPP16tUXwcJdVJClAA1ZgOuqInNNCfKPGr6_fXk.5B81CEE1B9DB7578EBAF774A7913FD20&amp;iss=https://localhost:5001](https://oauth.pstmn.io/v1/callback?code=0512947A962725A0AE0CAB2D59AD240EBA20E79EBC97B3FBBB360889D2769547-1&session_state=ZT1DnPP16tUXwcJdVJClAA1ZgOuqInNNCfKPGr6_fXk.5B81CEE1B9DB7578EBAF774A7913FD20&iss=https%3A%2F%2Flocalhost%3A5001)"
+          },
+          "response": [
+            {
+              "name": "200 redirects to HTML page (browser preview does not use javascript - not interactive)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/connect/authorize/callback?response_type=code&client_id=interactive&scope=openid%20profile%20scope2&redirect_uri=https%3A%2F%2Foauth.pstmn.io%2Fv1%2Fcallback&code_challenge={{code_challenge}}&code_challenge_method=S256",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "connect",
+                    "authorize",
+                    "callback"
+                  ],
+                  "query": [
+                    {
+                      "key": "response_type",
+                      "value": "code"
+                    },
+                    {
+                      "key": "client_id",
+                      "value": "interactive"
+                    },
+                    {
+                      "key": "scope",
+                      "value": "openid%20profile%20scope2"
+                    },
+                    {
+                      "key": "redirect_uri",
+                      "value": "https%3A%2F%2Foauth.pstmn.io%2Fv1%2Fcallback"
+                    },
+                    {
+                      "key": "code_challenge",
+                      "value": "{{code_challenge}}"
+                    },
+                    {
+                      "key": "code_challenge_method",
+                      "value": "S256"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": ":status",
+                  "value": 200
+                },
+                {
+                  "key": "content-type",
+                  "value": "text/html; charset=utf-8"
+                },
+                {
+                  "key": "date",
+                  "value": "Mon, 20 Jul 2026 22:36:53 GMT"
+                },
+                {
+                  "key": "server",
+                  "value": "Kestrel"
+                },
+                {
+                  "key": "cache-control",
+                  "value": "no-cache, no-store"
+                },
+                {
+                  "key": "pragma",
+                  "value": "no-cache"
+                },
+                {
+                  "key": "x-content-type-options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "x-frame-options",
+                  "value": "DENY"
+                },
+                {
+                  "key": "content-security-policy",
+                  "value": "default-src 'self'; object-src 'none'; frame-ancestors 'none'; sandbox allow-forms allow-same-origin allow-scripts; base-uri 'self';"
+                },
+                {
+                  "key": "x-content-security-policy",
+                  "value": "default-src 'self'; object-src 'none'; frame-ancestors 'none'; sandbox allow-forms allow-same-origin allow-scripts; base-uri 'self';"
+                },
+                {
+                  "key": "referrer-policy",
+                  "value": "no-referrer"
+                }
+              ],
+              "cookie": [],
+              "body": "<!DOCTYPE html>\n<html lang=\"en\">\n    <head>\n        <meta charset=\"utf-8\" />\n        <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, shrink-to-fit=no\" />\n        <title>Duende IdentityServer</title>\n        <link rel=\"icon\" type=\"image/x-icon\" href=\"/favicon.ico\" />\n        <link rel=\"shortcut icon\" type=\"image/x-icon\" href=\"/favicon.ico\" />\n        <link rel=\"stylesheet\" href=\"/lib/bootstrap/dist/css/bootstrap.min.css\" />\n        <link rel=\"stylesheet\" href=\"/lib/bootstrap4-glyphicons/css/bootstrap-glyphicons.min.css\" />\n        <link rel=\"stylesheet\" href=\"/css/site.css\" />\n    </head>\n    <body>\n        <div class=\"nav-page\">\n            <nav class=\"navbar navbar-expand-lg navbar-dark bg-dark\">\n                <a href=\"/\" class=\"navbar-brand\">\n                    <img src=\"/duende-logo.svg\" class=\"icon-banner\">\r\n            Duende IdentityServer\r\n        \n                </a>\n            </nav>\n        </div>\n        <div class=\"container body-container\">\n            <div class=\"login-page\">\n                <div class=\"lead\">\n                    <h1>Login</h1>\n                    <p>Choose how to login</p>\n                </div>\n                <div class=\"row\">\n                    <div class=\"col-sm-6\">\n                        <div class=\"card\">\n                            <div class=\"card-header\">\n                                <h2>Local Account</h2>\n                            </div>\n                            <div class=\"card-body\">\n                                <form action=\"/Account/Login\" method=\"post\">\n                                    <input type=\"hidden\" id=\"Input_ReturnUrl\" name=\"Input.ReturnUrl\" value=\"/connect/authorize/callback?response_type=code&amp;client_id=interactive&amp;scope=openid%20profile%20scope2&amp;redirect_uri=https%3A%2F%2Foauth.pstmn.io%2Fv1%2Fcallback&amp;code_challenge=3uT5M2zRa4SEbeghDIvi9Ko6K8F-ZnC5w8FMjneip-c&amp;code_challenge_method=S256\" />\n                                    <div class=\"form-group\">\n                                        <label for=\"Input_Username\">Username</label>\n                                        <input class=\"form-control\" placeholder=\"Username\" autofocus type=\"text\" data-val=\"true\" data-val-required=\"The Username field is required.\" id=\"Input_Username\" name=\"Input.Username\" value=\"\">\r\n                            \n                                    </div>\n                                    <div class=\"form-group\">\n                                        <label for=\"Input_Password\">Password</label>\n                                        <input type=\"password\" class=\"form-control\" placeholder=\"Password\" autocomplete=\"off\" data-val=\"true\" data-val-required=\"The Password field is required.\" id=\"Input_Password\" name=\"Input.Password\">\r\n                            \n                                    </div>\n                                    <div class=\"form-group\">\n                                        <div class=\"form-check\">\n                                            <input class=\"form-check-input\" type=\"checkbox\" data-val=\"true\" data-val-required=\"The RememberLogin field is required.\" id=\"Input_RememberLogin\" name=\"Input.RememberLogin\" value=\"true\">\n                                            <label class=\"form-check-label\" for=\"Input_RememberLogin\">\r\n                                            Remember My Login\r\n                                        </label>\n                                        </div>\n                                    </div>\n                                    <button class=\"btn btn-primary\" name=\"Input.Button\" value=\"login\">Login</button>\n                                    <button class=\"btn btn-secondary\" name=\"Input.Button\" value=\"cancel\">Cancel</button>\n                                    <input name=\"__RequestVerificationToken\" type=\"hidden\" value=\"CfDJ8IIp5RlanAdHtUE3ZdqXQRGfJN1V-F-aoZvDREYI4cx7n17y1IagD5L-gbYZU3VIvAmR-fFw6-bzoVfqzM6Z-9Qp1wkPrh2DSjAM2k2lfdLRxaHyv3EaBEAinRW0syemVyU5JqNofIscd3tXNaiTAA8\" />\n                                    <input name=\"Input.RememberLogin\" type=\"hidden\" value=\"false\">\n                                </form>\n                            </div>\n                        </div>\n                    </div>\n                    <div class=\"col-sm-6\">\n                        <div class=\"card\">\n                            <div class=\"card-header\">\n                                <h2>External Account</h2>\n                            </div>\n                            <div class=\"card-body\">\n                                <ul class=\"list-inline\">\n                                    <li class=\"list-inline-item\">\n                                        <a class=\"btn btn-secondary\" href=\"/ExternalLogin/Challenge?scheme=oidc&amp;returnUrl=%2Fconnect%2Fauthorize%2Fcallback%3Fresponse_type%3Dcode%26client_id%3Dinteractive%26scope%3Dopenid%2520profile%2520scope2%26redirect_uri%3Dhttps%253A%252F%252Foauth.pstmn.io%252Fv1%252Fcallback%26code_challenge%3D3uT5M2zRa4SEbeghDIvi9Ko6K8F-ZnC5w8FMjneip-c%26code_challenge_method%3DS256\">\r\n                                        Sign-in with demo.duendesoftware.com\r\n                                    </a>\n                                    </li>\n                                </ul>\n                            </div>\n                        </div>\n                    </div>\n                </div>\n            </div>\n        </div>\n        <script src=\"/lib/jquery/dist/jquery.slim.min.js\"></script>\n        <script src=\"/lib/bootstrap/dist/js/bootstrap.bundle.min.js\"></script>\n    </body>\n</html>"
+            }
+          ]
+        },
+        {
+          "name": "2. token",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Parse the JSON response\r",
+                  "const response = pm.response.json();\r",
+                  "\r",
+                  "// Store the id_token as a collection variable\r",
+                  "if (response.id_token) {\r",
+                  "    pm.collectionVariables.set(\"id_token\", response.id_token);\r",
+                  "    console.log(\"id_token stored in collection variable.\");\r",
+                  "} else {\r",
+                  "    console.warn(\"No id_token found in response.\");\r",
+                  "}\r",
+                  "\r",
+                  "if (response.access_token) {\r",
+                  "    pm.collectionVariables.set(\"access_token\", response.access_token);\r",
+                  "    console.log(\"access_token stored in collection variable.\");\r",
+                  "} else {\r",
+                  "    console.warn(\"No access_token found in response.\");\r",
+                  "}\r",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "authorization_code",
+                  "type": "text"
+                },
+                {
+                  "key": "code",
+                  "value": "8A57144A1B247D0DB15925F084720D8255AACC46811F7947D90296A61DB37DF0-1",
+                  "type": "text",
+                  "description": "This is derived from the browser (after step 1), this needs to be copied from /callback?code=<value>"
+                },
+                {
+                  "key": "redirect_uri",
+                  "value": "https://oauth.pstmn.io/v1/callback",
+                  "type": "text"
+                },
+                {
+                  "key": "code_verifier",
+                  "value": "{{code_verifier}}",
+                  "type": "text",
+                  "description": "The code verfifer used in step 1 connect/authorize"
+                },
+                {
+                  "key": "client_id",
+                  "value": "interactive",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/connect/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "connect",
+                "token"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 token response after code is copy pasted from browser",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "grant_type",
+                      "value": "authorization_code",
+                      "type": "text"
+                    },
+                    {
+                      "key": "code",
+                      "value": "41C67266EF5AF108717A012C40937C5AFD2A1E94AFEB1B7FABFBBA47B035666B-1",
+                      "type": "text"
+                    },
+                    {
+                      "key": "redirect_uri",
+                      "value": "https://oauth.pstmn.io/v1/callback",
+                      "type": "text"
+                    },
+                    {
+                      "key": "code_verifier",
+                      "value": "{{code_verifier}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "client_id",
+                      "value": "interactive",
+                      "type": "text"
+                    }
+                  ],
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://localhost:5001/connect/token",
+                  "protocol": "https",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5001",
+                  "path": [
+                    "connect",
+                    "token"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": ":status",
+                  "value": 200
+                },
+                {
+                  "key": "content-type",
+                  "value": "application/json; charset=UTF-8"
+                },
+                {
+                  "key": "date",
+                  "value": "Mon, 20 Jul 2026 22:30:22 GMT"
+                },
+                {
+                  "key": "server",
+                  "value": "Kestrel"
+                },
+                {
+                  "key": "cache-control",
+                  "value": "no-store, no-cache, max-age=0"
+                },
+                {
+                  "key": "pragma",
+                  "value": "no-cache"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"id_token\": \"eyJhbGciOiJSUzI1NiIsImtpZCI6IjlFRkQ2QTI1RDFEQUVGQUUyMzA2MkVFMzhFMkFDMzlCIiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL2xvY2FsaG9zdDo1MDAxIiwibmJmIjoxNzg0NTg2NjIzLCJpYXQiOjE3ODQ1ODY2MjMsImV4cCI6MTc4NDU4NjkyMywiYXVkIjoiaW50ZXJhY3RpdmUiLCJhbXIiOlsicHdkIl0sImF0X2hhc2giOiJZRTJhMHJ6dU5RdU1XYnZoc2ZmWWJnIiwic2lkIjoiM0ZDOTIzQjhDRkVBNDI4OTY4MDlGNTU5M0VFNzAwMzAiLCJzdWIiOiIwYjZiZjU5ZS1iZWYwLTQzZmUtOTM0Yy0xNTIyZDRmZWJlYzciLCJhdXRoX3RpbWUiOjE3ODQ1ODU1NDQsImlkcCI6ImxvY2FsIn0.i8kQEcxD7BoDPQhZejvebwkFsXkjOxs6ybw7PbTdbkgO1gxwrIm4L4qZH6GvQAd4u_k7DEYSMV_MI85kDIySq9BxEUCBKAL0XhiZxSI67cgtUU2CGU110B50yXqh8TDI-armbPcGwDdpsz7QqioaXalZZsp16wNdKydYPZWYHApbhkdU2ha_pWaPlXzFQrzrJmL4GHzC1YW_B_iy04YvQZ_4PhywPA0AgkKZ7pW6Qr9nGNdf_0BADYASyM7lMG2p-1vVzL9KSAvAgYHYXxLCfkrDFgGzcusTTpS1DaYlAJgWngS-ZUytfp3HuIs_63WRhrQNUhVkP4Cbb1xOkP4X5A\",\n    \"access_token\": \"eyJhbGciOiJSUzI1NiIsImtpZCI6IjlFRkQ2QTI1RDFEQUVGQUUyMzA2MkVFMzhFMkFDMzlCIiwidHlwIjoiYXQrand0In0.eyJpc3MiOiJodHRwczovL2xvY2FsaG9zdDo1MDAxIiwibmJmIjoxNzg0NTg2NjIzLCJpYXQiOjE3ODQ1ODY2MjMsImV4cCI6MTc4NDU5MDIyMywic2NvcGUiOlsib3BlbmlkIiwicHJvZmlsZSIsInNjb3BlMiJdLCJhbXIiOlsicHdkIl0sImNsaWVudF9pZCI6ImludGVyYWN0aXZlIiwic3ViIjoiMGI2YmY1OWUtYmVmMC00M2ZlLTkzNGMtMTUyMmQ0ZmViZWM3IiwiYXV0aF90aW1lIjoxNzg0NTg1NTQ0LCJpZHAiOiJsb2NhbCIsInNpZCI6IjNGQzkyM0I4Q0ZFQTQyODk2ODA5RjU1OTNFRTcwMDMwIiwianRpIjoiMTQ3QzE3NDYyM0Q5NzMyQzNDNUQzQThCQjk5NjlCNEIifQ.OHeMKA4ZGe38ba2HlN_n9XwG7dDuVLJP_HsCXbP_JwTRbOU_QzQFbhy9s-L7ufCopvEe6Nkgsveq1p-gjotlEq0cenqOX81uNsEo6rI4muyWEjrwxJ4DeWwkoEcQvcxaRHpQXFkudeBcZerAUpK_mOkSy4SLzJ4UyDAWzDUtUqBBU97Lww50dABiOwCQ7J6a1X-awCWB1y5bL9piPbG3dwk3sZ4GHyCb8czpHDVvpOXYT35B4o5SSvGsXNdfL2pKKt6g5skT0DhW4gD7As_Vw9CAg3tqT0_q8_2wf9bV-FbFGKci7g2PFhLwIJDZLijGf7B5H2KseSq7qstz7UIIqQ\",\n    \"expires_in\": 3600,\n    \"token_type\": \"Bearer\",\n    \"scope\": \"openid profile scope2\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "3. userinfo",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/connect/userinfo",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "connect",
+                "userinfo"
+              ]
+            },
+            "description": "Retrieves claims about the authenticated end-user. This is a standard OpenID Connect UserInfo endpoint as defined in the [OIDC Core spec](https://openid.net/specs/openid-connect-core-1_0.html#UserInfo). The caller must present a valid Bearer access token that was issued with at least the `openid` scope. The server responds with a JSON object containing the claims for the user (e.g. `sub`, `name`, `email`, etc.)."
+          },
+          "response": []
+        },
+        {
+          "name": "4. end session",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Populate id_token_hint from the stored id_token",
+                  "// The id_token is stored as a collection variable after completing the OAuth flow.",
+                  "// If not yet stored, complete the OAuth flow on any request in this collection,",
+                  "// then run: pm.collectionVariables.set('id_token', '<your_id_token>')",
+                  "",
+                  "const idToken = pm.collectionVariables.get('id_token') ",
+                  "    || pm.environment.get('id_token');",
+                  "",
+                  "if (idToken) {",
+                  "    pm.variables.set('id_token', idToken);",
+                  "} else {",
+                  "    throw new Error(",
+                  "        'id_token not found. Complete the OAuth 2.0 flow first. ' +",
+                  "        'The id_token is returned alongside the access_token in the token response. ' +",
+                  "        'Store it with: pm.collectionVariables.set(\"id_token\", responseJson.id_token)'",
+                  "    );",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://localhost:5001/connect/endsession?id_token_hint={{id_token}}&post_logout_redirect_uri=https%3A%2F%2Foauth.pstmn.io%2Fv1%2Fcallback",
+              "protocol": "https",
+              "host": [
+                "localhost"
+              ],
+              "port": "5001",
+              "path": [
+                "connect",
+                "endsession"
+              ],
+              "query": [
+                {
+                  "key": "id_token_hint",
+                  "value": "{{id_token}}"
+                },
+                {
+                  "key": "post_logout_redirect_uri",
+                  "value": "https%3A%2F%2Foauth.pstmn.io%2Fv1%2Fcallback"
+                }
+              ]
+            },
+            "description": "Logs out the authenticated user via the OpenID Connect RP-Initiated Logout spec (`end_session_endpoint`). The client should pass the `id_token_hint` to identify the session. Optionally, a `post_logout_redirect_uri` (must be pre-registered) and `state` can be provided so the user is redirected back to the client after logout. Supports both GET and POST per the OIDC spec."
+          },
+          "response": [
+            {
+              "name": "200 logged out",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "https://localhost:5001/connect/endsession?id_token_hint={{id_token}}",
+                  "protocol": "https",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5001",
+                  "path": [
+                    "connect",
+                    "endsession"
+                  ],
+                  "query": [
+                    {
+                      "key": "id_token_hint",
+                      "value": "{{id_token}}"
+                    },
+                    {
+                      "key": "post_logout_redirect_uri",
+                      "value": "https%3A%2F%2Foauth.pstmn.io%2Fv1%2Fcallback",
+                      "disabled": true
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": ":status",
+                  "value": 200
+                },
+                {
+                  "key": "content-type",
+                  "value": "text/html; charset=utf-8"
+                },
+                {
+                  "key": "date",
+                  "value": "Mon, 20 Jul 2026 23:07:37 GMT"
+                },
+                {
+                  "key": "server",
+                  "value": "Kestrel"
+                },
+                {
+                  "key": "x-content-type-options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "x-frame-options",
+                  "value": "DENY"
+                },
+                {
+                  "key": "content-security-policy",
+                  "value": "default-src 'self'; object-src 'none'; frame-ancestors 'none'; sandbox allow-forms allow-same-origin allow-scripts; base-uri 'self';"
+                },
+                {
+                  "key": "x-content-security-policy",
+                  "value": "default-src 'self'; object-src 'none'; frame-ancestors 'none'; sandbox allow-forms allow-same-origin allow-scripts; base-uri 'self';"
+                },
+                {
+                  "key": "referrer-policy",
+                  "value": "no-referrer"
+                }
+              ],
+              "cookie": [],
+              "body": "<!DOCTYPE html>\n<html lang=\"en\">\n    <head>\n        <meta charset=\"utf-8\" />\n        <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, shrink-to-fit=no\" />\n        <title>Duende IdentityServer</title>\n        <link rel=\"icon\" type=\"image/x-icon\" href=\"/favicon.ico\" />\n        <link rel=\"shortcut icon\" type=\"image/x-icon\" href=\"/favicon.ico\" />\n        <link rel=\"stylesheet\" href=\"/lib/bootstrap/dist/css/bootstrap.min.css\" />\n        <link rel=\"stylesheet\" href=\"/lib/bootstrap4-glyphicons/css/bootstrap-glyphicons.min.css\" />\n        <link rel=\"stylesheet\" href=\"/css/site.css\" />\n    </head>\n    <body>\n        <div class=\"nav-page\">\n            <nav class=\"navbar navbar-expand-lg navbar-dark bg-dark\">\n                <a href=\"/\" class=\"navbar-brand\">\n                    <img src=\"/duende-logo.svg\" class=\"icon-banner\">\r\n            Duende IdentityServer\r\n        \n                </a>\n            </nav>\n        </div>\n        <div class=\"container body-container\">\n            <div class=\"logged-out-page\">\n                <h1>\r\n        Logout\r\n        \n                    <small>You are now logged out</small>\n                </h1>\n            </div>\n        </div>\n        <script src=\"/lib/jquery/dist/jquery.slim.min.js\"></script>\n        <script src=\"/lib/bootstrap/dist/js/bootstrap.bundle.min.js\"></script>\n    </body>\n</html>"
+            }
+          ]
+        }
+      ]
+    },
     {
       "name": "m2m client",
       "request": {
@@ -14,13 +562,13 @@
           "type": "basic",
           "basic": [
             {
-              "key": "username",
-              "value": "m2m.client",
+              "key": "password",
+              "value": "{{m2m_client_secret}}",
               "type": "string"
             },
             {
-              "key": "password",
-              "value": "511536EF-F270-4058-80CA-1C89C192F69A",
+              "key": "username",
+              "value": "{{m2m_client_id}}",
               "type": "string"
             }
           ]
@@ -48,9 +596,9 @@
           ]
         },
         "url": {
-          "raw": "{{baseUrl}}/connect/token",
+          "raw": "{{base_url}}/connect/token",
           "host": [
-            "{{baseUrl}}"
+            "{{base_url}}"
           ],
           "path": [
             "connect",
@@ -59,7 +607,76 @@
         },
         "description": "Generated from cURL: curl -X POST https://localhost:5001/connect/token \\\n  -H \"Content-Type: application/x-www-form-urlencoded\" \\\n  -d \"grant_type=client_credentials&scope=scope1\" \\\n  -u \"m2m.client:511536EF-F270-4058-80CA-1C89C192F69A\"\n"
       },
-      "response": []
+      "response": [
+        {
+          "name": "m2m client",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "type": "text",
+                  "key": "grant_type",
+                  "value": "client_credentials"
+                },
+                {
+                  "type": "text",
+                  "key": "scope",
+                  "value": "scope1"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/connect/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "connect",
+                "token"
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": null,
+          "header": [
+            {
+              "key": ":status",
+              "value": 200
+            },
+            {
+              "key": "content-type",
+              "value": "application/json; charset=UTF-8"
+            },
+            {
+              "key": "date",
+              "value": "Mon, 20 Jul 2026 18:54:16 GMT"
+            },
+            {
+              "key": "server",
+              "value": "Kestrel"
+            },
+            {
+              "key": "cache-control",
+              "value": "no-store, no-cache, max-age=0"
+            },
+            {
+              "key": "pragma",
+              "value": "no-cache"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n    \"access_token\": \"eyJhbGciOiJSUzI1NiIsImtpZCI6IjlFRkQ2QTI1RDFEQUVGQUUyMzA2MkVFMzhFMkFDMzlCIiwidHlwIjoiYXQrand0In0.eyJpc3MiOiJodHRwczovL2xvY2FsaG9zdDo1MDAxIiwibmJmIjoxNzg0NTczNjU3LCJpYXQiOjE3ODQ1NzM2NTcsImV4cCI6MTc4NDU3NzI1Nywic2NvcGUiOlsic2NvcGUxIl0sImNsaWVudF9pZCI6Im0ybS5jbGllbnQiLCJqdGkiOiJENjgwRTcyQjlCNEJFNDk2NDJCM0EyNkExNkZEN0JGRSJ9.MYqh1_Gnt8N_XaAByav7AJJhsn6XHCRSpDKB4bhGJ5n9f0IrhmWMBfKK8qSo80O30Zq1V7zZuZH2cihW9qtm9yzSP443pOAIWjw5Wra52bWOhpNR5lTOTPKsZlmC3aRIINwQ4XjsVsUZTrnWuLKWPpTMbDhPDNrsLscFm4uXLRuHRALeisU1DCeb32nNtuW3EcCX-1q4r6Jn9VYaV6JwqfFArJOI3z1om3uyEgN_gKOjB0aRYKsm7fC0K3QEYmEVEhIkxig69I9IpHqSdrFY_ZhrOByW28pZzHzf8ld3ayfmQFRVqiACsNm1I7nN3mL5B_2ca9nqYKqhxcg5E00gHA\",\n    \"expires_in\": 3600,\n    \"token_type\": \"Bearer\",\n    \"scope\": \"scope1\"\n}"
+        }
+      ]
     },
     {
       "name": "code flow",
@@ -67,9 +684,9 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/connect/authorize?response_type=code&client_id=interactive&scope=openid%20profile%20scope2&redirect_uri=https%3A%2F%2Foauth.pstmn.io%2Fv1%2Fcallback",
+          "raw": "{{base_url}}/connect/authorize?response_type=code&client_id=interactive&scope=openid%20profile%20scope2&redirect_uri=https%3A%2F%2Foauth.pstmn.io%2Fv1%2Fcallback",
           "host": [
-            "{{baseUrl}}"
+            "{{base_url}}"
           ],
           "path": [
             "connect",
@@ -103,15 +720,207 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/.well-known/openid-configuration",
+          "raw": "{{base_url}}/.well-known/openid-configuration",
           "host": [
-            "{{baseUrl}}"
+            "{{base_url}}"
           ],
           "path": [
             ".well-known",
             "openid-configuration"
           ]
+        },
+        "description": "Retrieves the OpenID Connect Discovery Document from the Identity Server.\n\nThis endpoint conforms to the [OpenID Connect Discovery 1.0 specification](https://openid.net/specs/openid-connect-discovery-1_0.html) and returns a JSON object containing metadata about the Identity Server's configuration, including the locations of its endpoints and the public key set used to verify tokens.\n\n## Response\n\nReturns a JSON document with the following key fields:\n\n| Field | Description |\n| --- | --- |\n| `issuer` | The base URL of the Identity Server |\n| `authorization_endpoint` | URL for the Authorization endpoint (used in Authorization Code and Implicit flows) |\n| `token_endpoint` | URL for the Token endpoint (used to exchange codes or credentials for tokens) |\n| `userinfo_endpoint` | URL for the UserInfo endpoint (returns claims about the authenticated user) |\n| `jwks_uri` | URL for the JSON Web Key Set (public keys used to verify JWTs) |\n| `end_session_endpoint` | URL to initiate logout |\n| `revocation_endpoint` | URL to revoke access or refresh tokens |\n| `introspection_endpoint` | URL to inspect the active state of a token |\n| `device_authorization_endpoint` | URL for the Device Authorization flow |\n| `pushed_authorization_request_endpoint` | URL for Pushed Authorization Requests (PAR) |\n\n## Usage\n\nThis endpoint is typically called by client applications on startup to dynamically discover the Identity Server's endpoint URLs rather than hardcoding them. The `{{baseUrl}}` variable should be set to the base URL of your Identity Server instance (e.g., `https://localhost:5001`).\n\n## Authentication\n\nNo authentication is required. This is a public endpoint."
+      },
+      "response": [
+        {
+          "name": "discovery",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/.well-known/openid-configuration",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                ".well-known",
+                "openid-configuration"
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": null,
+          "header": [
+            {
+              "key": ":status",
+              "value": 200
+            },
+            {
+              "key": "content-type",
+              "value": "application/json; charset=UTF-8"
+            },
+            {
+              "key": "date",
+              "value": "Mon, 20 Jul 2026 18:53:50 GMT"
+            },
+            {
+              "key": "server",
+              "value": "Kestrel"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n    \"issuer\": \"https://localhost:5001\",\n    \"jwks_uri\": \"https://localhost:5001/.well-known/openid-configuration/jwks\",\n    \"authorization_endpoint\": \"https://localhost:5001/connect/authorize\",\n    \"token_endpoint\": \"https://localhost:5001/connect/token\",\n    \"userinfo_endpoint\": \"https://localhost:5001/connect/userinfo\",\n    \"end_session_endpoint\": \"https://localhost:5001/connect/endsession\",\n    \"check_session_iframe\": \"https://localhost:5001/connect/checksession\",\n    \"revocation_endpoint\": \"https://localhost:5001/connect/revocation\",\n    \"introspection_endpoint\": \"https://localhost:5001/connect/introspect\",\n    \"device_authorization_endpoint\": \"https://localhost:5001/connect/deviceauthorization\",\n    \"backchannel_authentication_endpoint\": \"https://localhost:5001/connect/ciba\",\n    \"pushed_authorization_request_endpoint\": \"https://localhost:5001/connect/par\",\n    \"require_pushed_authorization_requests\": false,\n    \"frontchannel_logout_supported\": true,\n    \"frontchannel_logout_session_supported\": true,\n    \"backchannel_logout_supported\": true,\n    \"backchannel_logout_session_supported\": true,\n    \"scopes_supported\": [\n        \"openid\",\n        \"profile\",\n        \"scope1\",\n        \"scope2\",\n        \"offline_access\"\n    ],\n    \"claims_supported\": [\n        \"sub\",\n        \"name\",\n        \"family_name\",\n        \"given_name\",\n        \"middle_name\",\n        \"nickname\",\n        \"preferred_username\",\n        \"profile\",\n        \"picture\",\n        \"website\",\n        \"gender\",\n        \"birthdate\",\n        \"zoneinfo\",\n        \"locale\",\n        \"updated_at\"\n    ],\n    \"grant_types_supported\": [\n        \"authorization_code\",\n        \"client_credentials\",\n        \"refresh_token\",\n        \"implicit\",\n        \"password\",\n        \"urn:ietf:params:oauth:grant-type:device_code\",\n        \"urn:openid:params:grant-type:ciba\"\n    ],\n    \"response_types_supported\": [\n        \"code\",\n        \"token\",\n        \"id_token\",\n        \"id_token token\",\n        \"code id_token\",\n        \"code token\",\n        \"code id_token token\"\n    ],\n    \"response_modes_supported\": [\n        \"form_post\",\n        \"query\",\n        \"fragment\"\n    ],\n    \"token_endpoint_auth_methods_supported\": [\n        \"client_secret_basic\",\n        \"client_secret_post\"\n    ],\n    \"revocation_endpoint_auth_methods_supported\": [\n        \"client_secret_basic\",\n        \"client_secret_post\"\n    ],\n    \"introspection_endpoint_auth_methods_supported\": [\n        \"client_secret_basic\",\n        \"client_secret_post\"\n    ],\n    \"id_token_signing_alg_values_supported\": [\n        \"RS256\"\n    ],\n    \"userinfo_signing_alg_values_supported\": [\n        \"RS256\"\n    ],\n    \"introspection_signing_alg_values_supported\": [\n        \"RS256\"\n    ],\n    \"subject_types_supported\": [\n        \"public\"\n    ],\n    \"code_challenge_methods_supported\": [\n        \"plain\",\n        \"S256\"\n    ],\n    \"request_parameter_supported\": true,\n    \"request_object_signing_alg_values_supported\": [\n        \"RS256\",\n        \"RS384\",\n        \"RS512\",\n        \"PS256\",\n        \"PS384\",\n        \"PS512\",\n        \"ES256\",\n        \"ES384\",\n        \"ES512\"\n    ],\n    \"prompt_values_supported\": [\n        \"none\",\n        \"login\",\n        \"consent\",\n        \"select_account\"\n    ],\n    \"authorization_response_iss_parameter_supported\": true,\n    \"backchannel_token_delivery_modes_supported\": [\n        \"poll\"\n    ],\n    \"backchannel_user_code_parameter_supported\": true,\n    \"backchannel_authentication_request_signing_alg_values_supported\": [\n        \"RS256\",\n        \"RS384\",\n        \"RS512\",\n        \"PS256\",\n        \"PS384\",\n        \"PS512\",\n        \"ES256\",\n        \"ES384\",\n        \"ES512\"\n    ],\n    \"dpop_signing_alg_values_supported\": [\n        \"RS256\",\n        \"RS384\",\n        \"RS512\",\n        \"PS256\",\n        \"PS384\",\n        \"PS512\",\n        \"ES256\",\n        \"ES384\",\n        \"ES512\"\n    ]\n}"
         }
+      ]
+    },
+    {
+      "name": "userinfo",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/connect/userinfo",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "connect",
+            "userinfo"
+          ]
+        },
+        "description": "Retrieves claims about the authenticated end-user. This is a standard OpenID Connect UserInfo endpoint as defined in the [OIDC Core spec](https://openid.net/specs/openid-connect-core-1_0.html#UserInfo). The caller must present a valid Bearer access token that was issued with at least the `openid` scope. The server responds with a JSON object containing the claims for the user (e.g. `sub`, `name`, `email`, etc.)."
+      },
+      "response": [
+        {
+          "name": "userinfo",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/connect/userinfo",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "connect",
+                "userinfo"
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": null,
+          "header": [
+            {
+              "key": ":status",
+              "value": 200
+            },
+            {
+              "key": "content-type",
+              "value": "application/json; charset=UTF-8"
+            },
+            {
+              "key": "date",
+              "value": "Mon, 20 Jul 2026 18:32:22 GMT"
+            },
+            {
+              "key": "server",
+              "value": "Kestrel"
+            },
+            {
+              "key": "cache-control",
+              "value": "no-store, no-cache, max-age=0"
+            },
+            {
+              "key": "pragma",
+              "value": "no-cache"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n    \"sub\": \"0b6bf59e-bef0-43fe-934c-1522d4febec7\",\n    \"name\": \"Alice Smith\",\n    \"given_name\": \"Alice\",\n    \"family_name\": \"Smith\",\n    \"website\": \"http://alice.example.com\",\n    \"preferred_username\": \"alice\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "end session",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Populate id_token_hint from the stored id_token",
+              "// The id_token is stored as a collection variable after completing the OAuth flow.",
+              "// If not yet stored, complete the OAuth flow on any request in this collection,",
+              "// then run: pm.collectionVariables.set('id_token', '<your_id_token>')",
+              "",
+              "const idToken = pm.collectionVariables.get('id_token') ",
+              "    || pm.environment.get('id_token');",
+              "",
+              "if (idToken) {",
+              "    pm.variables.set('id_token', idToken);",
+              "} else {",
+              "    throw new Error(",
+              "        'id_token not found. Complete the OAuth 2.0 flow first. ' +",
+              "        'The id_token is returned alongside the access_token in the token response. ' +",
+              "        'Store it with: pm.collectionVariables.set(\"id_token\", responseJson.id_token)'",
+              "    );",
+              "}"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "GET https://localhost:5001/connect/endsession?id_token_hint={{id_token}}&post_logout_redirect_uri=https%3A%2F%2Foauth.pstmn.io%2Fv1%2Fcallback",
+          "protocol": "GET https",
+          "host": [
+            "localhost"
+          ],
+          "port": "5001",
+          "path": [
+            "connect",
+            "endsession"
+          ],
+          "query": [
+            {
+              "key": "id_token_hint",
+              "value": "{{id_token}}"
+            },
+            {
+              "key": "post_logout_redirect_uri",
+              "value": "https%3A%2F%2Foauth.pstmn.io%2Fv1%2Fcallback"
+            }
+          ]
+        },
+        "description": "Logs out the authenticated user via the OpenID Connect RP-Initiated Logout spec (`end_session_endpoint`). The client should pass the `id_token_hint` to identify the session. Optionally, a `post_logout_redirect_uri` (must be pre-registered) and `state` can be provided so the user is redirected back to the client after logout. Supports both GET and POST per the OIDC spec."
+      },
+      "response": []
+    },
+    {
+      "name": "check session iframe",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/connect/checksession",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "connect",
+            "checksession"
+          ]
+        },
+        "description": "Loads the OpenID Connect Check Session iframe as defined in the [Session Management spec](https://openid.net/specs/openid-connect-session-1_0.html). This endpoint returns an HTML page hosted by the Identity Server that client applications embed in a hidden `<iframe>`. The client periodically sends a `postMessage` to the iframe with the `client_id` and `session_state` value (received during the original auth response). The iframe replies with `unchanged`, `changed`, or `error` to indicate whether the user's session at the Identity Provider is still active. If `changed` is received, the client should silently re-authenticate to confirm whether the session has ended and log the user out locally if so."
       },
       "response": []
     }
@@ -125,18 +934,28 @@
         "type": "boolean"
       },
       {
-        "key": "grant_type",
-        "value": "authorization_code_with_pkce",
+        "key": "tokenName",
+        "value": "IDS",
         "type": "string"
       },
       {
-        "key": "authUrl",
-        "value": "{{baseUrl}}/connect/authorize",
+        "key": "clientId",
+        "value": "{{interactive_client_id}}",
         "type": "string"
       },
       {
         "key": "accessTokenUrl",
-        "value": "{{baseUrl}}/connect/token",
+        "value": "{{base_url}}/connect/token",
+        "type": "string"
+      },
+      {
+        "key": "authUrl",
+        "value": "{{base_url}}/connect/authorize",
+        "type": "string"
+      },
+      {
+        "key": "grant_type",
+        "value": "authorization_code_with_pkce",
         "type": "string"
       },
       {
@@ -157,16 +976,6 @@
       {
         "key": "scope",
         "value": "openid profile scope2",
-        "type": "string"
-      },
-      {
-        "key": "clientId",
-        "value": "{{clientId}}",
-        "type": "string"
-      },
-      {
-        "key": "tokenName",
-        "value": "IDM",
         "type": "string"
       },
       {
@@ -198,6 +1007,16 @@
           ""
         ]
       }
+    }
+  ],
+  "variable": [
+    {
+      "key": "id_token",
+      "value": ""
+    },
+    {
+      "key": "access_token",
+      "value": ""
     }
   ]
 }

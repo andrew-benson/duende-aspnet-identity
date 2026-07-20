@@ -26,16 +26,15 @@ public static class Config
             {
                 ClientId = "m2m.client",
                 ClientName = "Client Credentials Client",
-
                 AllowedGrantTypes = GrantTypes.ClientCredentials,
                 ClientSecrets = { new Secret("511536EF-F270-4058-80CA-1C89C192F69A".Sha256()) },
-
                 AllowedScopes = { "scope1" }
             },
-            // interactive client using code flow + pkce
+            // interactive client using code flow + pkce, use for HTTP Client Application (e.g. Postman)
             new Client
             {
                 ClientId = "interactive",
+                ClientName = "Web Login Interaction (Code + PKCE)",
                 // treat as a public PKCE client (no client secret) so Postman and native apps can use PKCE
                 RequirePkce = true,
                 RequireClientSecret = false,
@@ -57,6 +56,7 @@ public static class Config
                     "https://oauth.pstmn.io"
                 }
             },
+            // mobile native client using code flow + pkce, use exclusively for mobile apps (iOS, Android, etc.)
             new Client
             {
                 ClientId = "mobile.app",
