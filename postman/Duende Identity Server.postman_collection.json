@@ -2,6 +2,7 @@
   "info": {
     "_postman_id": "2e98f423-c2b9-45c8-8847-204f33d71d27",
     "name": "Duende Identity Server",
+    "description": "This collection provides a set of requests for interacting with a **Duende Identity Server** — an OpenID Connect and OAuth 2.0 identity provider. It is intended for exploring and testing the core authentication and token flows exposed by the server.\n\n## Authentication\n\nThe collection is pre-configured with **OAuth 2.0 (Authorization Code + PKCE)** at the collection level, using the following scopes: `openid profile scope2`. Token requests are sent to `{{baseUrl}}/connect/token` and the authorization endpoint is `{{baseUrl}}/connect/authorize`. The `{{clientId}}` variable is used to identify the client application.\n\n## Requests\n\n| Request | Method | Description |\n|---|---|---|\n| **discovery** | GET | Fetches the OpenID Connect Discovery Document (`/.well-known/openid-configuration`), which lists all server endpoints, supported grant types, scopes, and the JWKS URI for token verification. |\n| **code flow** | GET | Initiates the Authorization Code flow by hitting the `/connect/authorize` endpoint with the required query parameters (`response_type`, `client_id`, `scope`, `redirect_uri`). |\n| **m2m client** | POST | Requests a token using the Machine-to-Machine (Client Credentials) grant via `/connect/token`, suitable for server-to-server communication without user interaction. |\n\n## Variables\n\nThe collection relies on the following environment variables:\n\n- `{{baseUrl}}` — The base URL of the Identity Server instance\n- `{{clientId}}` — The OAuth 2.0 client identifier\n- `{{clientSecret}}` — The client secret (used where applicable)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "23032977",
     "_collection_link": "https://go.postman.co/collection/23032977-2e98f423-c2b9-45c8-8847-204f33d71d27?source=collection_link"
@@ -14,13 +15,13 @@
           "type": "basic",
           "basic": [
             {
-              "key": "username",
-              "value": "m2m.client",
+              "key": "password",
+              "value": "{{m2m_client_secret}}",
               "type": "string"
             },
             {
-              "key": "password",
-              "value": "511536EF-F270-4058-80CA-1C89C192F69A",
+              "key": "username",
+              "value": "{{m2m_client_id}}",
               "type": "string"
             }
           ]
@@ -48,9 +49,9 @@
           ]
         },
         "url": {
-          "raw": "{{baseUrl}}/connect/token",
+          "raw": "{{base_url}}/connect/token",
           "host": [
-            "{{baseUrl}}"
+            "{{base_url}}"
           ],
           "path": [
             "connect",
@@ -67,9 +68,9 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/connect/authorize?response_type=code&client_id=interactive&scope=openid%20profile%20scope2&redirect_uri=https%3A%2F%2Foauth.pstmn.io%2Fv1%2Fcallback",
+          "raw": "{{base_url}}/connect/authorize?response_type=code&client_id=interactive&scope=openid%20profile%20scope2&redirect_uri=https%3A%2F%2Foauth.pstmn.io%2Fv1%2Fcallback",
           "host": [
-            "{{baseUrl}}"
+            "{{base_url}}"
           ],
           "path": [
             "connect",
@@ -103,15 +104,35 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/.well-known/openid-configuration",
+          "raw": "{{base_url}}/.well-known/openid-configuration",
           "host": [
-            "{{baseUrl}}"
+            "{{base_url}}"
           ],
           "path": [
             ".well-known",
             "openid-configuration"
           ]
-        }
+        },
+        "description": "Retrieves the OpenID Connect Discovery Document from the Identity Server.\n\nThis endpoint conforms to the [OpenID Connect Discovery 1.0 specification](https://openid.net/specs/openid-connect-discovery-1_0.html) and returns a JSON object containing metadata about the Identity Server's configuration, including the locations of its endpoints and the public key set used to verify tokens.\n\n## Response\n\nReturns a JSON document with the following key fields:\n\n| Field | Description |\n|---|---|\n| `issuer` | The base URL of the Identity Server |\n| `authorization_endpoint` | URL for the Authorization endpoint (used in Authorization Code and Implicit flows) |\n| `token_endpoint` | URL for the Token endpoint (used to exchange codes or credentials for tokens) |\n| `userinfo_endpoint` | URL for the UserInfo endpoint (returns claims about the authenticated user) |\n| `jwks_uri` | URL for the JSON Web Key Set (public keys used to verify JWTs) |\n| `end_session_endpoint` | URL to initiate logout |\n| `revocation_endpoint` | URL to revoke access or refresh tokens |\n| `introspection_endpoint` | URL to inspect the active state of a token |\n| `device_authorization_endpoint` | URL for the Device Authorization flow |\n| `pushed_authorization_request_endpoint` | URL for Pushed Authorization Requests (PAR) |\n\n## Usage\n\nThis endpoint is typically called by client applications on startup to dynamically discover the Identity Server's endpoint URLs rather than hardcoding them. The `{{baseUrl}}` variable should be set to the base URL of your Identity Server instance (e.g., `https://localhost:5001`).\n\n## Authentication\n\nNo authentication is required. This is a public endpoint."
+      },
+      "response": []
+    },
+    {
+      "name": "userinfo",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/connect/userinfo",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "connect",
+            "userinfo"
+          ]
+        },
+        "description": "Retrieves claims about the authenticated end-user. This is a standard OpenID Connect UserInfo endpoint as defined in the [OIDC Core spec](https://openid.net/specs/openid-connect-core-1_0.html#UserInfo). The caller must present a valid Bearer access token that was issued with at least the `openid` scope. The server responds with a JSON object containing the claims for the user (e.g. `sub`, `name`, `email`, etc.)."
       },
       "response": []
     }
@@ -119,6 +140,11 @@
   "auth": {
     "type": "oauth2",
     "oauth2": [
+      {
+        "key": "clientId",
+        "value": "{{clientIdInteractive}}",
+        "type": "string"
+      },
       {
         "key": "useBrowser",
         "value": false,
@@ -157,11 +183,6 @@
       {
         "key": "scope",
         "value": "openid profile scope2",
-        "type": "string"
-      },
-      {
-        "key": "clientId",
-        "value": "{{clientId}}",
         "type": "string"
       },
       {
